@@ -1,3 +1,39 @@
+"""
+Don’t rely on the trailing slash to distinguish logic. FastAPI treats `/path` and `/path/` as 
+the same route.
+
+Follow that same pattern whenever you add new routes:
+1. Collection root (/resource/)
+2. Statics (fixed paths)
+3. Specific dynamics (e.g. /resource/by_xxx/{val})
+4. Generic dynamics (/resource/{id})
+5. Mutations (POST/PUT/DELETE)
+
+
+The one hard rule is that any path with a literal segment (e.g. /books/count) or 
+a more specific pattern (/books/by_author/{author}) must be declared before your 
+generic dynamic path (/books/{book_title}), otherwise “count” or “by_author” gets 
+captured as book_title="count" or "by_author".
+
+Best practice: when to use static vs query vs dynamic
+1. Static paths
+Use them for fixed, orthogonal actions or sub-resources that aren’t “one-of-a-collection.”
+
+Examples:
+* /books/count
+* /books/stats/top
+
+2. Path parameters (/{param})
+Use them to identify a single resource or to express a clear hierarchy:
+* Single item: /books/{book_id}
+* Nested resource: /authors/{author}/books or /books/{book_id}/reviews
+
+3. Query parameters
+Use them for optional filters, sorting, paging, and other modifiers on a collection endpoint.
+Examples:
+GET /books/?category=math&author=Jane%20Doe&page=2&limit=10
+"""
+
 from fastapi import FastAPI, Body
 
 app = FastAPI()
@@ -11,9 +47,11 @@ BOOKS: list[dict[str, str]] = [
     {'title': 'Title Six', 'author': 'Author Two', 'category': 'math'}
 ]
 
-@app.get("/books")
-async def read_all_books() -> list[dict[str, str]]:
-    return BOOKS
+# First example
+# @app.get("/books")
+# async def read_all_books() -> list[dict[str, str]]:
+#     return BOOKS
+
 
 # Path dynamic parameters
 @app.get("/books/{book_title}")
@@ -31,7 +69,7 @@ async def read_category_by_query(category: str) -> list[dict[str, str]]:
             books_to_return.append(book)
     return books_to_return
 
-# Path and query parameters
+# Path dynamic and query parameters
 @app.get("/books/{author}/")
 async def read_author_category_by_query(author: str, category: str) -> list[dict[str, str]]:
     books_to_return: list[dict[str, str]] = []
@@ -49,6 +87,7 @@ async def read_author_books(author: str) -> list[dict[str, str]]:
             books_to_return.append(book)
     return books_to_return
 
+# 5. Mutations (POST/PUT/DELETE)
 @app.post("/books/create_book")
 async def create_book(new_book=Body()):
     BOOKS.append(new_book)
